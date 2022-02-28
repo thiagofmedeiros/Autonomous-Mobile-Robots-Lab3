@@ -11,7 +11,7 @@ WHEEL_DIAMETER = 1.6
 MAX_PHI = 6.28
 MAX_SIMULATION_TIME = 30 * 1000
 MAX_MEASURED_DISTANCE = 1.27
-ACCEPTED_ERROR = 0.01
+ACCEPTED_ERROR = 0.005
 K1 = 0.1
 K2 = 0.5
 K3 = 1
@@ -108,24 +108,21 @@ def correctOrientation(frontPrevious, frontNow, leftPrevious, leftNow, rightPrev
     global time
 
     print("Yaw = {0:.2f}".format(getIMUDegrees()))
-    orientationGood = True
 
     if abs(rightPrevious - rightNow) > ACCEPTED_ERROR and \
             abs(leftPrevious - leftNow) > ACCEPTED_ERROR and \
             time < MAX_SIMULATION_TIME:
 
-        orientationGood = False
-
         # turn left
         if rightNow < rightPrevious:
             print("Turning left")
             rps = K * ((rightNow - rightPrevious)/(timestep / 1000))
-            setSpeedsRPS(-rps, rps)
+            setSpeedsRPS(rps, -rps)
 
         else:
             print("Turning right")
             rps = K * ((leftNow - leftPrevious)/(timestep / 1000))
-            setSpeedsRPS(rps, -rps)
+            setSpeedsRPS(-rps, rps)
 
         robot.step(timestep)
         time += timestep
@@ -135,13 +132,9 @@ def correctOrientation(frontPrevious, frontNow, leftPrevious, leftNow, rightPrev
 def moveToDistanceInches(X, K):
     global time
     error = 1
+    frontPrevious, leftPrevious, rightPrevious = getSensors()
 
     while abs(error) > ACCEPTED_ERROR and time < MAX_SIMULATION_TIME:
-        frontPrevious, leftPrevious, rightPrevious = getSensors()
-        robot.step(timestep)
-        time += timestep
-        print("Time {0:.3f} seconds\n".format(time / 1000))
-
         frontNow, leftNow, rightNow = getSensors()
 
         correctOrientation(frontPrevious, frontNow, leftPrevious, leftNow, rightPrevious, rightNow, K)
@@ -154,6 +147,13 @@ def moveToDistanceInches(X, K):
 
         setSpeedsRPS(rps, rps)
 
+        frontPrevious, leftPrevious, rightPrevious = getSensors()
+
+        robot.step(timestep)
+        time += timestep
+
+        print("Time {0:.3f} seconds\n".format(time / 1000))
+
     setSpeedsRPS(0, 0)
     print("\nSimulation Stopped\n")
 
@@ -162,5 +162,6 @@ time = 0
 setSpeedsRPS(0, 0)
 
 robot.step(timestep)
+time += timestep
 
-moveToDistanceInches(X1, K6)
+moveToDistanceInches(X1, K2)
