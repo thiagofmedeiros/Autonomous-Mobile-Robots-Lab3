@@ -11,7 +11,7 @@ WHEEL_DIAMETER = 1.6
 MAX_PHI = 6.28
 MAX_SIMULATION_TIME = 30 * 1000
 MAX_MEASURED_DISTANCE = 1.27
-ACCEPTED_ERROR = 0.005
+ACCEPTED_ERROR = 0.001
 K1 = 0.1
 K2 = 0.5
 K3 = 1
@@ -113,16 +113,17 @@ def correctOrientation(frontPrevious, frontNow, leftPrevious, leftNow, rightPrev
             abs(leftPrevious - leftNow) > ACCEPTED_ERROR and \
             time < MAX_SIMULATION_TIME:
 
-        # turn left
-        if rightNow < rightPrevious:
-            print("Turning left")
-            rps = K * ((rightNow - rightPrevious)/(timestep / 1000))
-            setSpeedsRPS(rps, -rps)
+        if 150 <= abs(getIMUDegrees()) <= 210:
+            # turn left
+            if rightNow < rightPrevious:
+                print("Turning left")
+                rps = K * ((rightNow - rightPrevious)/(timestep / 1000))
+                setSpeedsRPS(rps, -rps)
 
-        else:
-            print("Turning right")
-            rps = K * ((leftNow - leftPrevious)/(timestep / 1000))
-            setSpeedsRPS(-rps, rps)
+            else:
+                print("Turning right")
+                rps = K * ((leftNow - leftPrevious)/(timestep / 1000))
+                setSpeedsRPS(-rps, rps)
 
         robot.step(timestep)
         time += timestep
@@ -164,4 +165,4 @@ setSpeedsRPS(0, 0)
 robot.step(timestep)
 time += timestep
 
-moveToDistanceInches(X1, K2)
+moveToDistanceInches(X1, K6)
