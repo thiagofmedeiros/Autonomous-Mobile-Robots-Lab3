@@ -18,7 +18,7 @@ K3 = 1
 K4 = 2
 K5 = 2.5
 K6 = 5
-DESIRED_DISTANCE = 8 # (2.5 + 5.5) / 2
+DESIRED_DISTANCE = 8
 
 # create the Robot instance.
 robot = Robot()
@@ -156,41 +156,36 @@ def move(K):
         if front < 3:
             turn90(K)
 
-        rightDistance = right * abs(math.cos(getYawRadians()))
-        leftDistance = left * abs(math.cos(getYawRadians()))
-
-        print("rightDistance: {0:.3f}".format(rightDistance))
-        print("leftDistance: {0:.3f}\n".format(leftDistance))
-
         if 315 < yaw < 360 or 0 < yaw <= 45:
-            rightDistance = right * math.cos(getYawRadians())
-            leftDistance = left * math.cos(getYawRadians())
+            right = right * math.cos(getYawRadians())
+            left = left * math.cos(getYawRadians())
 
         elif 45 < yaw < 135:
-            rightDistance = right * math.sin(getYawRadians())
-            leftDistance = left * math.sin(getYawRadians())
+            right = right * math.sin(getYawRadians())
+            left = left * math.sin(getYawRadians())
 
         elif 135 < yaw < 225:
-            rightDistance = right * math.cos(getYawRadians()) * (-1)
-            leftDistance = left * math.cos(getYawRadians()) * (-1)
+            right = right * math.cos(getYawRadians()) * (-1)
+            left = left * math.cos(getYawRadians()) * (-1)
 
         elif 225 < yaw < 315:
-            rightDistance = right * math.sin(getYawRadians()) * (-1)
-            leftDistance = left * math.sin(getYawRadians()) * (-1)
+            right = right * math.sin(getYawRadians()) * (-1)
+            left = left * math.sin(getYawRadians()) * (-1)
 
-        print("rightDistance: {0:.3f}".format(rightDistance))
-        print("leftDistance: {0:.3f}".format(leftDistance))
+        print("rightDistance: {0:.3f}".format(right))
+        print("leftDistance: {0:.3f}".format(left))
 
-        Rrps = K * (DESIRED_DISTANCE - rightDistance) / (timestep / 1000)
-        Lrps = K * (DESIRED_DISTANCE - leftDistance) / (timestep / 1000)
+        Rrps = K * (DESIRED_DISTANCE - right) / (timestep / 1000)
+        Lrps = K * (DESIRED_DISTANCE - left) / (timestep / 1000)
 
-        if DESIRED_DISTANCE < 3:
-            setSpeedsRPS(Rrps, -Rrps)
+        # Keep distance from wall
+        if right < 3:
+            setSpeedsRPS(-Rrps, Rrps)
             robot.step(timestep)
             time += timestep
             print("Time {0:.3f} seconds\n".format(time / 1000))
-        elif DESIRED_DISTANCE > 5:
-            setSpeedsRPS(-Rrps, Rrps)
+        elif right > 5:
+            setSpeedsRPS(Rrps, -Rrps)
             robot.step(timestep)
             time += timestep
             print("Time {0:.3f} seconds\n".format(time / 1000))
