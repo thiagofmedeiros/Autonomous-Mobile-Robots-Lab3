@@ -12,6 +12,12 @@ MAX_PHI = 6.28
 MAX_SIMULATION_TIME = 30 * 1000
 MAX_MEASURED_DISTANCE = 1.27
 ACCEPTED_ERROR = 0.001
+K1 = 0.1
+K2 = 0.5
+K3 = 1
+K4 = 2
+K5 = 2.5
+K6 = 5
 
 # create the Robot instance.
 robot = Robot()
@@ -113,8 +119,8 @@ def move(K):
         rightDistance = right * abs(math.cos(getYawRadians()))
         leftDistance = left * abs(math.cos(getYawRadians()))
 
-        Rrps = K * (DESIRED_DISTANCE - rightDistance)
-        Lrps = K * (DESIRED_DISTANCE - leftDistance)
+        Rrps = K * (DESIRED_DISTANCE - rightDistance)/(timestep / 1000)
+        Lrps = K * (DESIRED_DISTANCE - leftDistance)/(timestep / 1000)
 
         setSpeedsRPS(Lrps, Rrps)
 
@@ -131,5 +137,5 @@ setSpeedsRPS(0, 0)
 
 robot.step(timestep)
 time += timestep
-
-move(90)
+# 90 works best with distance
+move(K5)
