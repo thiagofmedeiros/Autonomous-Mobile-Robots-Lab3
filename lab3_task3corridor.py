@@ -10,7 +10,7 @@ WHEEL_DIST = 1.05
 WHEEL_DIAMETER = 1.6
 MAX_PHI = 6.28
 MAX_SIMULATION_TIME = 30 * 1000
-MAX_MEASURED_DISTANCE = 1.27
+MAX_MEASURED_DISTANCE = 50
 ACCEPTED_ERROR = 0.001
 K1 = 0.1
 K2 = 0.5
@@ -18,6 +18,7 @@ K3 = 1
 K4 = 2
 K5 = 2.5
 K6 = 5
+DESIRED_DISTANCE = 8 # (2.5 + 5.5) / 2
 
 # create the Robot instance.
 robot = Robot()
@@ -108,13 +109,52 @@ def getYawRadians():
     return imu.getRollPitchYaw()[2]
 
 
+def rotateUntilFindWall(K):
+    global time
+
+    front, left, right, yaw = getSensors()
+
+    while right > 8:
+        # turn left
+        rps = K * ((DESIRED_DISTANCE - right) / (timestep / 1000))
+
+        setSpeedsRPS(rps, -rps)
+
+        robot.step(timestep)
+        time += timestep
+        print("Time {0:.3f} seconds\n".format(time / 1000))
+
+        front, left, right, yaw = getSensors()
+
+
+def turn90(K):
+    global time
+
+    yaw = getYawDegrees()
+
+    desiredYaw = yaw + 90
+
+    if desiredYaw > 360:
+        desiredYaw -= 360
+
+    while abs(getYawDegrees() - desiredYaw) > 5:
+        setSpeedsRPS(-MAX_PHI, MAX_PHI)
+
+        robot.step(timestep)
+        time += timestep
+        print("Time {0:.3f} seconds\n".format(time / 1000))
+
+
 def move(K):
     global time
 
-    while time/1000 < 30:
+    rotateUntilFindWall(K)
+
+    while time / 1000 < 3 * 60:
         front, left, right, yaw = getSensors()
 
-        DESIRED_DISTANCE = (2.5 + 5.5) / 2
+        if front < 3:
+            turn90(K)
 
         rightDistance = right * abs(math.cos(getYawRadians()))
         leftDistance = left * abs(math.cos(getYawRadians()))
@@ -122,27 +162,44 @@ def move(K):
         print("rightDistance: {0:.3f}".format(rightDistance))
         print("leftDistance: {0:.3f}\n".format(leftDistance))
 
-        if 225 < yaw <= 315 or 45 < yaw <= 135:
-            rightDistance = right * abs(math.cos(getYawRadians()))
-            leftDistance = left * abs(math.cos(getYawRadians()))
-        else:
-            rightDistance = right * abs(math.cos(getYawRadians()))
-            leftDistance = left * abs(math.cos(getYawRadians()))
+        if 315 < yaw < 360 or 0 < yaw <= 45:
+            rightDistance = right * math.cos(getYawRadians())
+            leftDistance = left * math.cos(getYawRadians())
+
+        elif 45 < yaw < 135:
+            rightDistance = right * math.sin(getYawRadians())
+            leftDistance = left * math.sin(getYawRadians())
+
+        elif 135 < yaw < 225:
+            rightDistance = right * math.cos(getYawRadians()) * (-1)
+            leftDistance = left * math.cos(getYawRadians()) * (-1)
+
+        elif 225 < yaw < 315:
+            rightDistance = right * math.sin(getYawRadians()) * (-1)
+            leftDistance = left * math.sin(getYawRadians()) * (-1)
 
         print("rightDistance: {0:.3f}".format(rightDistance))
         print("leftDistance: {0:.3f}".format(leftDistance))
 
-        Rrps = K * (DESIRED_DISTANCE - rightDistance)/(timestep / 1000)
-        Lrps = K * (DESIRED_DISTANCE - leftDistance)/(timestep / 1000)
+        Rrps = K * (DESIRED_DISTANCE - rightDistance) / (timestep / 1000)
+        Lrps = K * (DESIRED_DISTANCE - leftDistance) / (timestep / 1000)
 
-        setSpeedsRPS(Lrps, Rrps)
+        if DESIRED_DISTANCE < 3:
+            setSpeedsRPS(Rrps, -Rrps)
+            robot.step(timestep)
+            time += timestep
+            print("Time {0:.3f} seconds\n".format(time / 1000))
+        elif DESIRED_DISTANCE > 5:
+            setSpeedsRPS(-Rrps, Rrps)
+            robot.step(timestep)
+            time += timestep
+            print("Time {0:.3f} seconds\n".format(time / 1000))
 
+        # Step forward for not rotating infinitely
+        setSpeedsRPS(MAX_PHI, MAX_PHI)
         robot.step(timestep)
         time += timestep
         print("Time {0:.3f} seconds\n".format(time / 1000))
-
-        setSpeedsRPS(0, 0)
-        print("\nSimulation Stopped\n")
 
 
 time = 0
@@ -150,5 +207,8 @@ setSpeedsRPS(0, 0)
 
 robot.step(timestep)
 time += timestep
-# 90 works best with distance
-move(K3)
+
+move(K1)
+
+setSpeedsRPS(0, 0)
+print("\nSimulation Stopped\n")
