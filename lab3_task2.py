@@ -12,14 +12,6 @@ MAX_PHI = 6.28
 MAX_SIMULATION_TIME = 30 * 1000
 MAX_MEASURED_DISTANCE = 1.27
 ACCEPTED_ERROR = 0.001
-K1 = 0.1
-K2 = 0.5
-K3 = 1
-K4 = 2
-K5 = 2.5
-K6 = 5
-X1 = 12
-X2 = 10
 
 # create the Robot instance.
 robot = Robot()
@@ -87,16 +79,18 @@ def getSensors():
     fdsVal = metersToInches(frontDistanceSensor.getValue())
     ldsVal = metersToInches(leftDistanceSensor.getValue())
     rdsVal = metersToInches(rightDistanceSensor.getValue())
+    yaw = getYawDegrees()
 
     print("FrontDist {0:.3f} inches".format(fdsVal))
     print("LeftDist {0:.3f} inches".format(ldsVal))
     print("RightDist {0:.3f} inches\n".format(rdsVal))
+    print("Yaw = {0:.2f}".format(getYawDegrees()))
 
-    return fdsVal, ldsVal, rdsVal
+    return fdsVal, ldsVal, rdsVal, yaw
 
 
-def getIMUDegrees():
-    Yaw = math.degrees(imu.getRollPitchYaw()[2])
+def getYawDegrees():
+    Yaw = math.degrees(getYawRadians())
 
     if Yaw < 0:
         Yaw = Yaw + 360
@@ -104,59 +98,32 @@ def getIMUDegrees():
     return Yaw
 
 
-def correctOrientation(frontPrevious, frontNow, leftPrevious, leftNow, rightPrevious, rightNow, K):
+def getYawRadians():
+    return imu.getRollPitchYaw()[2]
+
+
+def move(K):
     global time
 
-    print("Yaw = {0:.2f}".format(getIMUDegrees()))
+    while time/1000 < 30:
+        front, left, right, yaw = getSensors()
 
-    if abs(rightPrevious - rightNow) > ACCEPTED_ERROR and \
-            abs(leftPrevious - leftNow) > ACCEPTED_ERROR and \
-            time < MAX_SIMULATION_TIME:
+        DESIRED_DISTANCE = (2.5 + 5.5) / 2
 
-        if 150 <= abs(getIMUDegrees()) <= 210:
-            # turn left
-            if rightNow < rightPrevious:
-                print("Turning left")
-                rps = K * ((rightNow - rightPrevious)/(timestep / 1000))
-                setSpeedsRPS(rps, -rps)
+        rightDistance = right * abs(math.cos(getYawRadians()))
+        leftDistance = left * abs(math.cos(getYawRadians()))
 
-            else:
-                print("Turning right")
-                rps = K * ((leftNow - leftPrevious)/(timestep / 1000))
-                setSpeedsRPS(-rps, rps)
+        Rrps = K * (DESIRED_DISTANCE - rightDistance)
+        Lrps = K * (DESIRED_DISTANCE - leftDistance)
+
+        setSpeedsRPS(Lrps, Rrps)
 
         robot.step(timestep)
         time += timestep
         print("Time {0:.3f} seconds\n".format(time / 1000))
 
-
-def moveToDistanceInches(X, K):
-    global time
-    error = 1
-    frontPrevious, leftPrevious, rightPrevious = getSensors()
-
-    while abs(error) > ACCEPTED_ERROR and time < MAX_SIMULATION_TIME:
-        frontNow, leftNow, rightNow = getSensors()
-
-        correctOrientation(frontPrevious, frontNow, leftPrevious, leftNow, rightPrevious, rightNow, K)
-
-        frontNow, leftNow, rightNow = getSensors()
-
-        error = frontNow - X
-
-        rps = K * error
-
-        setSpeedsRPS(rps, rps)
-
-        frontPrevious, leftPrevious, rightPrevious = getSensors()
-
-        robot.step(timestep)
-        time += timestep
-
-        print("Time {0:.3f} seconds\n".format(time / 1000))
-
-    setSpeedsRPS(0, 0)
-    print("\nSimulation Stopped\n")
+        setSpeedsRPS(0, 0)
+        print("\nSimulation Stopped\n")
 
 
 time = 0
@@ -165,4 +132,4 @@ setSpeedsRPS(0, 0)
 robot.step(timestep)
 time += timestep
 
-moveToDistanceInches(X1, K6)
+move(90)
